@@ -91,10 +91,14 @@
 
 ### SOLID原則
 *   **クラスやモジュールの役割を1つに絞り、変更に強く拡張しやすい設計にする。**
-*   **解説:** ソフトウェア設計の5つの原則（単一責任の原則、オープン・クローズドの原則など）の総称です。ここでは特に「単一責任の原則（SRP）」に焦点を当てます。
-*   **TypeScript 例 (単一責任の原則):**
+*   **解説:** ソフトウェア設計をより理解しやすく、柔軟で、メンテナンスしやすいものにするための5つの原則の総称です。
+
+#### 1. 単一責任の原則 (Single Responsibility Principle - SRP)
+*   **クラスやモジュールを変更する理由は1つだけでなければならない。**
+*   **解説:** 1つのクラスがあまりに多くのことを行っていると、ある機能の変更が他の無関係な機能に影響を与えてしまう可能性があります。役割ごとにクラスを分割することで、影響範囲を限定できます。
+*   **TypeScript 例:**
     ```typescript
-    // Bad: Userクラスがデータの保持と保存処理の両方を行っている
+    // Bad: Userクラスが「データ保持」と「保存処理」という2つの責任を持っている
     class User {
       constructor(public name: string) {}
 
@@ -104,18 +108,190 @@
       }
     }
 
-    // Good: 役割を分離する (データの保持と保存処理を分ける)
+    // Good: 責任を分割する
+    // データ保持の責任
     class User {
       constructor(public name: string) {}
     }
 
+    // 保存処理の責任
     class UserRepository {
       save(user: User) {
-        // データベースへの保存処理...
         console.log(`Saving ${user.name} to DB`);
       }
     }
     ```
+*   **改善点:** `User`クラスはデータの定義だけに関心を持ち、保存方法の変更（DBからファイルへなど）の影響を受けなくなりました。
+
+#### 2. オープン・クローズドの原則 (Open/Closed Principle - OCP)
+*   **ソフトウェアの構成要素（クラス、モジュール、関数など）は、拡張に対しては開いていて、修正に対しては閉じていなければならない。**
+*   **解説:** 新しい機能を追加するときに、既存のコードを修正せずに済むように設計すべきです。インターフェースや継承をうまく使うことで実現します。
+*   **TypeScript 例:**
+    ```typescript
+    // Bad: 新しい図形が増えるたびに、AreaCalculatorクラスを修正する必要がある
+    class Rectangle {
+      constructor(public width: number, public height: number) {}
+    }
+
+    class Circle {
+      constructor(public radius: number) {}
+    }
+
+    class AreaCalculator {
+      calculate(shape: any) {
+        if (shape instanceof Rectangle) {
+          return shape.width * shape.height;
+        } else if (shape instanceof Circle) {
+          return shape.radius * shape.radius * Math.PI;
+        }
+      }
+    }
+
+    // Good: インターフェースを使って、既存コードを修正せずに拡張可能にする
+    interface Shape {
+      area(): number;
+    }
+
+    class Rectangle implements Shape {
+      constructor(public width: number, public height: number) {}
+      area() { return this.width * this.height; }
+    }
+
+    class Circle implements Shape {
+      constructor(public radius: number) {}
+      area() { return this.radius * this.radius * Math.PI; }
+    }
+
+    class AreaCalculator {
+      calculate(shape: Shape) {
+        return shape.area();
+      }
+    }
+    ```
+*   **改善点:** 新しい図形（例えばTriangle）を追加したい場合、`AreaCalculator`を一切変更せずに、新しいクラスを作るだけで済みます。
+
+#### 3. リスコフの置換原則 (Liskov Substitution Principle - LSP)
+*   **派生型（サブクラス）はその基本型（スーパークラス）と置換可能でなければならない。**
+*   **解説:** サブクラスは、スーパークラスの振る舞いを壊してはいけません。親クラスとして扱っても正しく動作する必要があります。
+*   **TypeScript 例:**
+    ```typescript
+    // Bad: サブクラスで親クラスの前提を壊している
+    class Bird {
+      fly() { console.log('Flying'); }
+    }
+
+    class Penguin extends Bird {
+      fly() {
+        throw new Error('Cannot fly'); // ペンギンは飛べない
+      }
+    }
+
+    function makeBirdFly(bird: Bird) {
+      bird.fly(); // ペンギンが渡されるとエラーになり、プログラムが壊れる
+    }
+
+    // Good: 共通の振る舞いを正しく抽出する
+    class Bird {
+      move() { console.log('Moving'); }
+    }
+
+    class FlyingBird extends Bird {
+      fly() { console.log('Flying'); }
+    }
+
+    class Penguin extends Bird {
+      swim() { console.log('Swimming'); }
+    }
+
+    function makeBirdFly(bird: FlyingBird) {
+      bird.fly(); // 飛べる鳥だけを受け取る
+    }
+    ```
+*   **改善点:** `Penguin`を無理やり`Bird`（飛べるものとしての前提）のサブクラスにするのではなく、適切な継承関係やインターフェースに見直すことで、予期せぬエラーを防ぎます。
+
+#### 4. インターフェース分離の原則 (Interface Segregation Principle - ISP)
+*   **クライアントが利用しないメソッドへの依存を強制してはならない。**
+*   **解説:** 巨大なインターフェースを作るよりも、目的別の小さなインターフェースを複数作った方が良いです。不要な実装を強制されるのを防ぎます。
+*   **TypeScript 例:**
+    ```typescript
+    // Bad: 必要のないメソッドまで実装させられる
+    interface Worker {
+      work(): void;
+      eat(): void;
+    }
+
+    class Human implements Worker {
+      work() { console.log('Working'); }
+      eat() { console.log('Eating lunch'); }
+    }
+
+    class Robot implements Worker {
+      work() { console.log('Working'); }
+      eat() {
+        throw new Error('Cannot eat'); // ロボットは食べないが実装を強制される
+      }
+    }
+
+    // Good: インターフェースを分離する
+    interface Workable {
+      work(): void;
+    }
+
+    interface Eatable {
+      eat(): void;
+    }
+
+    class Human implements Workable, Eatable {
+      work() { console.log('Working'); }
+      eat() { console.log('Eating lunch'); }
+    }
+
+    class Robot implements Workable {
+      work() { console.log('Working'); }
+    }
+    ```
+*   **改善点:** `Robot`クラスは`eat`メソッドを実装する必要がなくなり、自分に関係のある機能だけに集中できます。
+
+#### 5. 依存性逆転の原則 (Dependency Inversion Principle - DIP)
+*   **上位モジュールは下位モジュールに依存してはならない。両者は抽象に依存すべきである。**
+*   **解説:** 具体的なクラスに依存するのではなく、インターフェースや抽象クラスに依存させることで、結合度を下げます。これにより、実装の差し替えが容易になります。
+*   **TypeScript 例:**
+    ```typescript
+    // Bad: 上位モジュール(UserService)が下位モジュール(MySQLDatabase)に直接依存している
+    class MySQLDatabase {
+      save(data: string) { console.log('Saved to MySQL'); }
+    }
+
+    class UserService {
+      private db = new MySQLDatabase(); // 直接依存
+
+      saveUser(name: string) {
+        this.db.save(name);
+      }
+    }
+
+    // Good: 抽象（インターフェース）に依存させる
+    interface Database {
+      save(data: string): void;
+    }
+
+    class MySQLDatabase implements Database {
+      save(data: string) { console.log('Saved to MySQL'); }
+    }
+
+    class PostgreSQLDatabase implements Database {
+      save(data: string) { console.log('Saved to PostgreSQL'); }
+    }
+
+    class UserService {
+      constructor(private db: Database) {} // 抽象に依存
+
+      saveUser(name: string) {
+        this.db.save(name);
+      }
+    }
+    ```
+*   **改善点:** `UserService`は具体的なデータベースの実装を知る必要がなくなり、`MySQL`から`PostgreSQL`への切り替えなども`UserService`のコードを変更せずに行えます。
 
 ## 2. コーディング規約の基本
 
