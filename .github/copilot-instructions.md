@@ -1,4 +1,4 @@
-# Copilot Instructions for TooMe's Task App (Web)
+# Copilot Instructions
 
 ## 前提条件
 <!-- ここに前提条件を記述 -->
